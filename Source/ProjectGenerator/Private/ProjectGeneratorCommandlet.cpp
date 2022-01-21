@@ -136,21 +136,32 @@ int32 UProjectGeneratorCommandlet::MainInternal(FCommandletRunParams& Params) {
 
 	UE_LOG(LogProjectGeneratorCommandlet, Display, TEXT("Found %d engine plugins and %d engine modules"), EnginePlugins.Num(), EngineModules.Num());
 
-	const FString CrossModuleIncludePrefix = TEXT("//CROSS-MODULE INCLUDE: ");
+	const FString CrossModuleIncludePrefix = TEXT("//CROSS-MODULE INCLUDE V2: ");
 	TSet<FString> ModulesThatHaveTriedBeingLoaded;
 
 	auto HandleModuleHeaderFile = [&](const FString& HeaderFileName, TArray<FString>& HeaderLines) {
 		for (FString& HeaderString : HeaderLines) {
 			if (HeaderString.StartsWith(CrossModuleIncludePrefix)) {
 
-				const FString IncludeComponentsString = HeaderString.Mid(CrossModuleIncludePrefix.Len());
-				TArray<FString> IncludeComponents;
-				IncludeComponentsString.ParseIntoArray(IncludeComponents, TEXT(" "));
+				const FString IncludeData = HeaderString.Mid(CrossModuleIncludePrefix.Len());
 
-				const FString IncludeModuleName = IncludeComponents[0];
+				FString IncludeModuleName;
+				FString IncludeObjectName;
+				FParse::Value(*IncludeData, TEXT("ModuleName="), IncludeModuleName);
+				FParse::Value(*IncludeData, TEXT("ObjectName="), IncludeObjectName);
+
+				if (IncludeModuleName.Len() == 0 || IncludeObjectName.Len() == 0) {
+					UE_LOG(LogProjectGeneratorCommandlet, Warning, TEXT("Malformed cross module include string encoutered processing %s: %s"), *HeaderFileName, *HeaderString);
+					continue;
+				}
+
+				FString FallbackHeaderName = IncludeObjectName;
+				FParse::Value(*IncludeData, TEXT("FallbackName="), FallbackHeaderName);
+				
 				FModuleManager& ModuleManager = FModuleManager::Get();
 
 				//Try loading the module if it has not been loaded already and we know for a fact that it exists inside of the engine
+				//TODO this is surely a hack, we need a better solution involving using uproject file data
 				if (EngineModules.Contains(IncludeModuleName) && !ModuleManager.IsModuleLoaded(*IncludeModuleName)) {
 					if (!ModulesThatHaveTriedBeingLoaded.Contains(IncludeModuleName)) {
 						ModulesThatHaveTriedBeingLoaded.Add(IncludeModuleName);
@@ -158,20 +169,19 @@ int32 UProjectGeneratorCommandlet::MainInternal(FCommandletRunParams& Params) {
 						IModuleInterface* LoadedModule = ModuleManager.LoadModule(*IncludeModuleName);
 						if (LoadedModule != NULL) {
 							ProcessNewlyLoadedUObjects();
+							UE_LOG(LogProjectGeneratorCommandlet, Warning, TEXT("Force loaded engine module %s"), *IncludeModuleName);
 						} else {
 							UE_LOG(LogProjectGeneratorCommandlet, Warning, TEXT("Failed to load engine module %s required by the header file %s"), *IncludeModuleName, *HeaderFileName);
 						}
 					}
 				}
 				
-				const FString IncludeObjectName = IncludeComponents[1];
-				
 				const FString ModulePackageName = FString::Printf(TEXT("/Script/%s"), *IncludeModuleName);
 				UPackage* ModulePackage = FindPackage(NULL, *ModulePackageName);
 
 				//If module package is not found, we assume it's one of the game modules, and generate a normal include
 				if (ModulePackage == NULL) {
-					HeaderString = FString::Printf(TEXT("#include \"%s.h\""), *IncludeObjectName);
+					HeaderString = FString::Printf(TEXT("#include \"%s.h\""), *FallbackHeaderName);
 					continue;
 				}
 
@@ -517,6 +527,7 @@ FString UProjectGeneratorCommandlet::GetIncludePathForObject(UObject* Object) {
 
 	FString IncludePath = MetaData->GetValue(Object, TEXT("ModuleRelativePath"));
 	checkf(!IncludePath.IsEmpty(), TEXT("ModuleRelativePath metadata not found on object %s"), *Object->GetPathName());
+	
 	// Walk over the first potential slash
 	if (IncludePath.StartsWith(TEXT("/"))) {
 		IncludePath.RemoveAt(0);
