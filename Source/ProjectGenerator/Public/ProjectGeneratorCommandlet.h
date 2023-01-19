@@ -26,7 +26,8 @@ public:
 private:
 	int32 MainInternal(FCommandletRunParams& Params);
 
-	static void GenerateTargetFile(FCommandletRunParams& Params, const FString& TargetFileName, const TSet<FString>& GameModuleNames);
+	static void GenerateEditorFile(FCommandletRunParams& Params, const FString& TargetFileName, const TSet<FString>& GameModuleNames, const FString&
+	                               EditorType);
 	static void DiscoverPlugins(const FString& PluginDirectory, TMap<FString, TSet<FString>>& OutPluginsFound);
 	static void DiscoverModules(const FString& SourceDirectory, TSet<FString>& OutModulesFound);
 	static FString GetIncludePathForObject(UObject* Object);

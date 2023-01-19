@@ -399,24 +399,26 @@ int32 UProjectGeneratorCommandlet::MainInternal(FCommandletRunParams& Params) {
 
 	//Generate the editor target file
 	const FString TargetFileName = ProjectSourceDir / FString::Printf(TEXT("%sEditor.Target.cs"), *Params.ProjectName);
-	GenerateTargetFile(Params, TargetFileName, LooseGameModuleNames);
+	GenerateEditorFile(Params, TargetFileName, LooseGameModuleNames, TEXT("Editor"));
+	const FString GameFileName = ProjectSourceDir / FString::Printf(TEXT("%sGame.Target.cs"), *Params.ProjectName);
+	GenerateEditorFile(Params, GameFileName, LooseGameModuleNames, TEXT("Game"));
 
 	UE_LOG(LogProjectGeneratorCommandlet, Display, TEXT("Wrote project data to %s"), *Params.OutputDirectory);
 	return 0;
 }
 
-void UProjectGeneratorCommandlet::GenerateTargetFile(FCommandletRunParams& Params, const FString& TargetFileName, const TSet<FString>& GameModuleNames) {
+void UProjectGeneratorCommandlet::GenerateEditorFile(FCommandletRunParams& Params, const FString& FileName, const TSet<FString>& GameModuleNames, const FString& EditorType) {
 
-	FOutputDeviceFile TargetFileOutputDevice(*TargetFileName, true, false);
+	FOutputDeviceFile TargetFileOutputDevice(*FileName, true, false);
 	TargetFileOutputDevice.SetAutoEmitLineTerminator(true);
 	TargetFileOutputDevice.SetSuppressEventTag(true);
 
 	TargetFileOutputDevice.Logf(TEXT("using UnrealBuildTool;"));
 	TargetFileOutputDevice.Logf(TEXT(""));
-	TargetFileOutputDevice.Logf(TEXT("public class %sEditorTarget : TargetRules {"), *Params.ProjectName);
-	TargetFileOutputDevice.Logf(TEXT("	public %sEditorTarget(TargetInfo Target) : base(Target) {"), *Params.ProjectName);
+	TargetFileOutputDevice.Logf(TEXT("public class %s%sTarget : TargetRules {"), *Params.ProjectName, *EditorType);
+	TargetFileOutputDevice.Logf(TEXT("	public %s%sTarget(TargetInfo Target) : base(Target) {"), *Params.ProjectName, *EditorType);
 
-	TargetFileOutputDevice.Logf(TEXT("		Type = TargetType.Editor;"));
+	TargetFileOutputDevice.Logf(TEXT("		Type = TargetType.%s;"), *EditorType);
 	TargetFileOutputDevice.Logf(TEXT("		DefaultBuildSettings = BuildSettingsVersion.V2;"));
 
 	TargetFileOutputDevice.Logf(TEXT("		ExtraModuleNames.AddRange(new string[] {"));
@@ -431,7 +433,6 @@ void UProjectGeneratorCommandlet::GenerateTargetFile(FCommandletRunParams& Param
 	TargetFileOutputDevice.Flush();
 	TargetFileOutputDevice.TearDown();
 }
-
 
 void UProjectGeneratorCommandlet::DiscoverPlugins(const FString& PluginDirectory, TMap<FString, TSet<FString>>& OutPluginsFound) {
 	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
