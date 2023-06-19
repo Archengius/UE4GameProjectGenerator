@@ -2,10 +2,11 @@
 Small commandlet for generating a complete project using UE4SS header dump, Project File and Plugin Manifest
 
 # Usage
-Compile the project for the Development Editor Win64 target first
-Make sure to add plugins your game depends on to the .uplugin file!
+1. Change the UE version of the .uproject file to match whatever you're building for.
+2. Make sure to add plugins your game depends on to the .uplugin file!
+3. Compile the project for the Development Editor Win64 target first.
 
-Run through the command line:
+Optionally, run through the command line:
 ```
 "${ENGINE_DISTRIBUTION_BIN}\UE4Editor-Cmd.exe" "${PROJECT_DIR}\GameProjectGenerator.uproject" -run=ProjectGenerator -HeaderRoot="${HEADER_DUMP_PATH}" -ProjectFile="${GAME_PROJECT_FILE}" -PluginManifest="${GAME_PLUGIN_MANIFEST}" -OutputDir="${OUTPUT_DIR}" -stdout -unattended -NoLogTimes
 ```
