@@ -374,7 +374,11 @@ int32 UProjectGeneratorCommandlet::MainInternal(FCommandletRunParams& Params) {
 
 		//Strip out whitelisted platforms that we do not know about, Stadia in particular
 		//TODO seems to be engine patch to support stadia target? Is it a backport from UE4.26?
+#if ENGINE_MAJOR_VERSION == 4		
 		PluginReference.WhitelistPlatforms.Remove(TEXT("Stadia"));
+#else
+		PluginReference.PlatformAllowList.Remove(TEXT("Stadia"));
+#endif
 		
 		//Keep engine plugins references
 		return !EnginePlugins.Contains(PluginName) &&
